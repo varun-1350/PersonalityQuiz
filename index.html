@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Big Five Personality Quiz</title>
+  <style>
+    :root{--bg:#fafafa;--card:#ffffff;--accent:#6b46c1;--muted:#6b7280}
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial;margin:0;background:var(--bg);color:#111}
+    .container{max-width:900px;margin:28px auto;padding:18px}
+    .card{background:var(--card);border-radius:12px;padding:20px;box-shadow:0 6px 20px rgba(11,15,26,0.06)}
+    header h1{margin:0;font-size:22px}
+    .meta{color:var(--muted);font-size:13px;margin-top:6px}
+    .question{margin-top:18px}
+    .qnum{font-weight:600}
+    .qtext{margin:8px 0 12px}
+    .radios{display:flex;gap:8px}
+    .radio-btn{flex:1;padding:8px 10px;border-radius:8px;border:1px solid #e6e7ea;text-align:center;cursor:pointer;user-select:none}
+    .radio-btn input{display:none}
+    .radio-btn.selected{border-color:var(--accent);background:linear-gradient(90deg, rgba(107,70,193,0.08), rgba(107,70,193,0.03))}
+    .controls{display:flex;justify-content:space-between;align-items:center;margin-top:18px}
+    .btn{background:var(--accent);color:white;padding:8px 14px;border-radius:8px;border:none;cursor:pointer}
+    .progress{height:10px;background:#efefef;border-radius:999px;overflow:hidden}
+    .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#9f7aea);width:0%}
+    .result{display:none;margin-top:18px}
+    .bars{display:grid;grid-template-columns:1fr 60px;gap:10px;align-items:center}
+    .bar-wrap{background:#f3f4f6;border-radius:999px;height:18px;overflow:hidden}
+    .bar{height:100%;width:0%;background:linear-gradient(90deg,#7c3aed,#a78bfa)}
+    .small{font-size:13px;color:var(--muted)}
+    footer{margin-top:14px;text-align:center;color:var(--muted);font-size:13px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card" id="app">
+      <header>
+        <h1>Big Five — 10 Question Quick Quiz</h1>
+        <div class="meta">Answer honestly. 1 = Disagree, 3 = Neutral, 5 = Agree.</div>
+      </header>
+
+      <main>
+        <div class="question" id="questionBox"></div>
+
+        <div style="margin-top:12px" class="controls">
+          <button id="prevBtn" class="btn" style="background:#e6e7ea;color:#111">Previous</button>
+          <div style="flex:1;margin:0 10px">
+            <div class="progress"><i id="progressBar"></i></div>
+          </div>
+          <button id="nextBtn" class="btn">Next</button>
+        </div>
+
+        <div class="result card" id="resultCard">
+          <h3>Results</h3>
+          <div class="small">Scores (0–100)</div>
+
+          <div style="margin-top:12px">
+
+            <div class="bars">
+              <div>
+                <div class="small">Extraversion</div>
+                <div class="bar-wrap"><div id="barEXT" class="bar"></div></div>
+              </div>
+              <div id="valEXT">0</div>
+            </div>
+
+            <div class="bars" style="margin-top:10px">
+              <div>
+                <div class="small">Emotional Stability (inverse of Neuroticism)</div>
+                <div class="bar-wrap"><div id="barEST" class="bar"></div></div>
+              </div>
+              <div id="valEST">0</div>
+            </div>
+
+            <div class="bars" style="margin-top:10px">
+              <div>
+                <div class="small">Agreeableness</div>
+                <div class="bar-wrap"><div id="barAGR" class="bar"></div></div>
+              </div>
+              <div id="valAGR">0</div>
+            </div>
+
+            <div class="bars" style="margin-top:10px">
+              <div>
+                <div class="small">Conscientiousness</div>
+                <div class="bar-wrap"><div id="barCSN" class="bar"></div></div>
+              </div>
+              <div id="valCSN">0</div>
+            </div>
+
+            <div class="bars" style="margin-top:10px">
+              <div>
+                <div class="small">Openness</div>
+                <div class="bar-wrap"><div id="barOPN" class="bar"></div></div>
+              </div>
+              <div id="valOPN">0</div>
+            </div>
+
+            <div style="margin-top:14px;display:flex;gap:8px">
+              <button id="restartBtn" class="btn" style="background:#e6e7ea;color:#111">Retake</button>
+              <button id="downloadBtn" class="btn">Download CSV</button>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <footer>Built for your Personality Quiz Using ML project</footer>
+    </div>
+  </div>
+
+  <script>
+    // ---------------------------------------
+    // QUESTION BANK: 5 traits, many questions
+    // ---------------------------------------
+    const QUESTION_BANK = {
+      EXT: [
+        ['EXT1','I am the life of the party.'],
+        ['EXT2','I don’t talk a lot.'],
+        ['EXT3','I feel comfortable around people.'],
+        ['EXT4','I keep in the background.'],
+        ['EXT5','I start conversations.']
+      ],
+      EST: [
+        ['EST1','I get stressed out easily.'],
+        ['EST2','I am relaxed most of the time.'],
+        ['EST3','I worry about things.'],
+        ['EST4','I seldom feel blue.'],
+        ['EST5','I get irritated easily.']
+      ],
+      AGR: [
+        ['AGR1','I feel little concern for others.'],
+        ['AGR2','I am helpful and unselfish with others.'],
+        ['AGR3','I insult people.'],
+        ['AGR4','I sympathize with others\' feelings.'],
+        ['AGR5','I am not interested in other people’s problems.']
+      ],
+      CSN: [
+        ['CSN1','I am always prepared.'],
+        ['CSN2','I leave my belongings around.'],
+        ['CSN3','I pay attention to details.'],
+        ['CSN4','I make a mess of things.'],
+        ['CSN5','I get chores done right away.']
+      ],
+      OPN: [
+        ['OPN1','I have a rich vocabulary.'],
+        ['OPN2','I have difficulty understanding abstract ideas.'],
+        ['OPN3','I have a vivid imagination.'],
+        ['OPN4','I am not interested in abstract ideas.'],
+        ['OPN5','I have excellent ideas.']
+      ]
+    };
+        // Big Five scoring description
+const TRAIT_DESC = {
+  high: {
+    EXT: "You are outgoing, energetic, and enjoy social interaction.",
+    EST: "You experience emotions strongly and may feel stress easily.",
+    AGR: "You are compassionate, kind, and value harmony.",
+    CSN: "You are disciplined, organized, and responsible.",
+    OPN: "You are creative, curious, and open to new ideas."
+  },
+  medium: {
+    EXT: "You enjoy people but also value alone time.",
+    EST: "You handle stress reasonably well with some ups and downs.",
+    AGR: "You are friendly but can stand up for yourself.",
+    CSN: "You are fairly organized but not overly rigid.",
+    OPN: "You are practical with a touch of creativity."
+  },
+  low: {
+    EXT: "You prefer quiet, calm environments and deep connections.",
+    EST: "You remain calm, relaxed, and emotionally steady.",
+    AGR: "You are direct, honest, and may prioritize logic over feelings.",
+    CSN: "You are flexible, spontaneous, and may dislike strict routines.",
+    OPN: "You prefer routine, simplicity, and practical ideas."
+  }
+};
+
+
+    // ----------  Utility: pick 2 random ----------
+    function pickTwoRandom(arr){
+      const copy=[...arr];
+      for(let i=copy.length-1;i>0;i--){
+        const j=Math.floor(Math.random()*(i+1));
+        [copy[i],copy[j]]=[copy[j],copy[i]];
+      }
+      return copy.slice(0,2);
+    }
+
+    function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]]; // swap
+  }
+  return array;
+}
+
+
+
+    // ---------- Build 10-question quiz ----------
+    function buildQuiz(){
+      let list=[];
+      Object.values(QUESTION_BANK).forEach(trait=>{
+        list.push(...pickTwoRandom(trait));
+      });
+      return list;
+    }
+
+    let QUESTIONS = buildQuiz();
+    QUESTIONS = shuffle(QUESTIONS)
+
+    let total = QUESTIONS.length;
+    let state = { idx: 0, answers: new Array(total).fill(null) };
+
+
+    const questionBox = document.getElementById('questionBox');
+    const progressBar = document.getElementById('progressBar');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const resultCard = document.getElementById('resultCard');
+    const restartBtn = document.getElementById('restartBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    // ---------------- Render question ----------------
+    function renderQuestion(i){
+      const [code,text] = QUESTIONS[i];
+      questionBox.innerHTML = `
+        <div class="qnum">Question ${i+1} of ${total}</div>
+        <div class="qtext">${text}</div>
+        <div class="radios">
+          ${[1,2,3,4,5].map(v=>`
+            <label class="radio-btn" data-val="${v}">
+              <input type="radio" value="${v}">${v}
+            </label>`).join('')}
+        </div>
+      `;
+
+      // restore selection
+      const sel = state.answers[i];
+      if(sel){
+        document.querySelectorAll('.radio-btn').forEach(lbl=>{
+          if(+lbl.dataset.val===sel) lbl.classList.add('selected');
+        });
+      }
+
+      document.querySelectorAll('.radio-btn').forEach(lbl=>{
+        lbl.addEventListener('click',()=>{
+          document.querySelectorAll('.radio-btn').forEach(l=>l.classList.remove('selected'));
+          lbl.classList.add('selected');
+          state.answers[i] = Number(lbl.dataset.val);
+        });
+      });
+
+      const filled = state.answers.filter(v=>v!==null).length;
+      progressBar.style.width = (filled/total)*100 + "%";
+
+      prevBtn.style.display = i===0?"none":"inline-block";
+      nextBtn.textContent = i===total-1?"Finish":"Next";
+    }
+
+    // -------- Navigation --------
+    prevBtn.addEventListener('click',()=>{
+      if(state.idx>0){ state.idx--; renderQuestion(state.idx); }
+    });
+
+    nextBtn.addEventListener('click',()=>{
+      if(state.idx < total-1){
+        state.idx++;
+        renderQuestion(state.idx);
+      } else {
+        finishQuiz();
+      }
+    });
+    function computeTraitScores(answers, questions) {
+  const traits = ["EXT","EST","AGR","CSN","OPN"];
+  const scores = { EXT:0, EST:0, AGR:0, CSN:0, OPN:0 };
+
+  // Map each question back to its trait by order
+  let index = 0;
+  traits.forEach(trait => {
+    for (let i = 0; i < 2; i++) {   // 2 questions per trait
+      scores[trait] += answers[index];
+      index++;
+    }
+  });
+
+  return scores;
+}
+
+function getDescription(score) {
+  if (score >= 7) return "high";
+  if (score >= 4) return "medium";
+  return "low";
+}
+
+function generatePersonalityReport(scores) {
+  let report = "";
+
+  Object.entries(scores).forEach(([trait, score]) => {
+    let level = getDescription(score);
+    report += `<b>${trait}</b> (${level.toUpperCase()}): ${TRAIT_DESC[level][trait]}<br><br>`;
+  });
+
+  return report;
+}
+
+    // ----------------- CSV Download -----------------
+    downloadBtn.addEventListener('click',()=>{
+      const header = QUESTIONS.map(q=>q[0]).join(',');
+      const row = state.answers.map(v=>v??'').join(',');
+      const csv = header + '\n' + row;
+
+      const blob = new Blob([csv],{type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url; a.download="bigfive_answers.csv"; a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // ----------------- Retake -----------------
+    restartBtn.addEventListener('click',()=>{
+      QUESTIONS = buildQuiz();
+      total = QUESTIONS.length;
+      state = { idx: 0, answers: new Array(total).fill(null) };
+      resultCard.style.display='none';
+      renderQuestion(0);
+    });
+
+    // ----------------- Scoring -----------------
+    function finishQuiz(){
+  const map={};
+  QUESTIONS.forEach((q,i)=> map[q[0]] = state.answers[i] || 0);
+
+  const reverse = k => k===0?0:(6-k);
+
+  function score(prefix){
+    const keys = QUESTIONS.filter(q=>q[0].startsWith(prefix)).map(q=>q[0]);
+    let totalScore=0;
+    keys.forEach(k=>{
+      const v = map[k];
+      const reverseItems = {
+        EXT:['EXT2','EXT4'],
+        EST:['EST2','EST4'],
+        AGR:['AGR1','AGR3'],
+        CSN:['CSN2','CSN4'],
+        OPN:['OPN2','OPN4']
+      };
+      if(reverseItems[prefix].includes(k)) totalScore += reverse(v);
+      else totalScore += v;
+    });
+    return Math.round((totalScore / (keys.length*5))*100);
+  }
+
+  const ext=score('EXT'), est=score('EST'), agr=score('AGR');
+  const csn=score('CSN'), opn=score('OPN');
+
+  // Set bar values
+  document.getElementById('barEXT').style.width = ext+'%'; 
+  document.getElementById('valEXT').textContent = ext;
+
+  document.getElementById('barEST').style.width = est+'%'; 
+  document.getElementById('valEST').textContent = est;
+
+  document.getElementById('barAGR').style.width = agr+'%'; 
+  document.getElementById('valAGR').textContent = agr;
+
+  document.getElementById('barCSN').style.width = csn+'%'; 
+  document.getElementById('valCSN').textContent = csn;
+
+  document.getElementById('barOPN').style.width = opn+'%'; 
+  document.getElementById('valOPN').textContent = opn;
+
+  // ----- Personality text descriptions -----
+  const scores = { EXT: ext/20, EST: est/20, AGR: agr/20, CSN: csn/20, OPN: opn/20 };
+
+  function getDescriptionLevel(score){
+    if(score >= 4) return "high";
+    if(score >= 2) return "medium";
+    return "low";
+  }
+
+  let reportHTML = "<h3 style='margin-top:18px'>Personality Summary</h3>";
+
+  Object.entries(scores).forEach(([trait, val])=>{
+    const level = getDescriptionLevel(val);
+    reportHTML += `
+      <div style="margin-top:10px">
+        <b>${trait}</b> (${level.toUpperCase()})<br>
+        <span style="font-size:13px;color:#555">${TRAIT_DESC[level][trait]}</span>
+      </div>
+    `;
+  });
+
+  // Insert under bars
+  resultCard.insertAdjacentHTML("beforeend", reportHTML);
+
+  resultCard.style.display='block';
+  resultCard.scrollIntoView({behavior:'smooth'});
+}
+
+    // Start quiz
+    renderQuestion(0);
+  </script>
+</body>
+</html>
